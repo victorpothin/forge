@@ -1,0 +1,22 @@
+{
+  // FORGE Example: .NET REST API
+  // Shows how to configure FORGE for a Qwen-only workflow
+
+  "ai": "qwen",
+  "model": "qwen-code",
+  "gate_mode": "strict",
+  "skills_dir": "skills/",
+  "layers": {
+    "context": true,
+    "problem": true,
+    "locked_path": true,
+    "planning": true,
+    "execution": true,
+    "testing": true,
+    "documentation": true
+  },
+  "layer_ai": {
+    // All layers handled by Qwen
+  },
+  "response_language": "en"
+}

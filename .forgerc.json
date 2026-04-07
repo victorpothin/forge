@@ -1,0 +1,45 @@
+{
+  // FORGE Configuration — Focused, Ordered, Restricted, Guided Execution
+  // This file tells the AI which model is being used and how to behave.
+
+  // AI provider currently in use
+  // Supported: "qwen", "claude", "gemini", "gpt", "custom"
+  "ai": "qwen",
+
+  // Model name (optional, for documentation purposes)
+  "model": "qwen-code",
+
+  // Gate behavior — controls how the AI pauses between layers
+  // "strict" (default): AI MUST stop and ask for user confirmation before advancing
+  // "auto": AI advances automatically (not recommended for serious work)
+  "gate_mode": "strict",
+
+  // Skills base directory (relative to this file)
+  "skills_dir": "skills/",
+
+  // Active layers — disable layers you don't want to use
+  "layers": {
+    "context": true,
+    "problem": true,
+    "locked_path": true,
+    "planning": true,
+    "execution": true,
+    "testing": true,
+    "documentation": true
+  },
+
+  // Per-layer AI overrides (optional)
+  // Example: use Claude for planning, Qwen for execution
+  "layer_ai": {
+    // "context": "qwen",
+    // "problem": "qwen",
+    // "locked_path": "qwen",
+    // "planning": "claude",
+    // "execution": "qwen",
+    // "testing": "qwen",
+    // "documentation": "qwen"
+  },
+
+  // Language for AI responses
+  "response_language": "en"
+}

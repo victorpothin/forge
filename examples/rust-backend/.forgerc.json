@@ -1,0 +1,29 @@
+{
+  // FORGE Example: Rust + Axum Backend
+  // Shows how to configure FORGE with mixed AI models:
+  // Claude for planning/docs, Qwen for execution/testing
+
+  "ai": "qwen",
+  "model": "qwen-code",
+  "gate_mode": "strict",
+  "skills_dir": "skills/",
+  "layers": {
+    "context": true,
+    "problem": true,
+    "locked_path": true,
+    "planning": true,
+    "execution": true,
+    "testing": true,
+    "documentation": true
+  },
+  "layer_ai": {
+    "context": "qwen",
+    "problem": "claude",
+    "locked_path": "qwen",
+    "planning": "claude",
+    "execution": "qwen",
+    "testing": "qwen",
+    "documentation": "claude"
+  },
+  "response_language": "en"
+}
