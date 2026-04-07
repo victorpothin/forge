@@ -1,6 +1,5 @@
 # Go build artifacts
 forge
-cli/forge
 *.exe
 *.exe~
 *.dll
@@ -13,7 +12,7 @@ cli/forge
 .DS_Store
 Thumbs.db
 
-# AI agent directories — these are generated per-project by AI tools
+# AI agent directories
 .qwen/
 .claude/
 .gemini/

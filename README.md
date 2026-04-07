@@ -39,41 +39,52 @@ The AI must stop and confirm with you before advancing. This is not optional.
 ```
 forge/
 ├── README.md
-├── FORGE.md                  # Master template — start here
-├── .forgerc.json             # Configuration — AI model, gates, layers
-├── AI-ADAPTER.md             # How each AI model should behave with FORGE
+├── FORGE.md                  # Master template
+├── .forgerc.json             # Configuration
+├── AI-ADAPTER.md             # AI model behavior guide
 ├── LICENSE                   # MIT License
+├── go.mod                    # Go module definition
+├── main.go                   # CLI entry point
 │
-├── cli/                      # Go CLI — forge init, forge doctor
-│   ├── cmd/
-│   └── internal/templates/
+├── cmd/                      # CLI commands (cobra)
+│   ├── root.go
+│   ├── init.go
+│   └── doctor.go
 │
-├── skills/
-│   ├── context/              # Layer 1: extract & validate project understanding
-│   ├── problem/              # Layer 2: identify & prioritize problems
-│   ├── locked-path/          # Layer 3: register restrictions
-│   ├── planning/             # Layer 4: decompose, map skills, order tasks
-│   ├── execution/            # Layer 5: run tasks, enforce scope
-│   ├── testing/              # Layer 6: unit & acceptance tests
-│   └── docs/                 # Layer 7: document what was built
+├── internal/
+│   └── templates/            # Embedded FORGE templates + skills
+│       ├── FORGE.md
+│       ├── skills/
+│       └── templates.go
+│
+├── skills/                   # Source skills (copied to cli/embed on build)
+│   ├── context/
+│   ├── problem/
+│   ├── locked-path/
+│   ├── planning/
+│   ├── execution/
+│   ├── testing/
+│   └── docs/
 │
 └── examples/
-    ├── dotnet-api/           # Qwen-only workflow example
-    └── rust-backend/         # Mixed model workflow example (Qwen + Claude)
+    ├── dotnet-api/
+    └── rust-backend/
 ```
 
 ## CLI
 
 ### Install
 
+**From source (works now):**
 ```bash
-go install github.com/forge-cli/forge@latest
+git clone https://github.com/victorpothin/forge.git
+cd forge && go build -o forge .
+sudo mv forge /usr/local/bin/
 ```
 
-Or from source:
-
+**Via go install (requires a release tag):**
 ```bash
-git clone https://github.com/victorpothin/forge.git && cd forge/cli && go build -o forge . && sudo mv forge /usr/local/bin/
+go install github.com/victorpothin/forge@latest
 ```
 
 ### Usage

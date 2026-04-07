@@ -1,4 +1,4 @@
-module github.com/forge-cli/forge
+module github.com/victorpothin/forge
 
 go 1.22
 

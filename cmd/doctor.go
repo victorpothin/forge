@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/forge-cli/forge/internal/templates"
+	"github.com/victorpothin/forge/internal/templates"
 	"github.com/spf13/cobra"
 )
 
