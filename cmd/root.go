@@ -1,14 +1,36 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
+	"os/exec"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
 
-// Set via -ldflags at build time. Falls back to "dev" for local builds.
-var version = "dev"
+// version is set via -ldflags at build time. Falls back to auto-detection.
+var version = ""
+
+func detectVersion() string {
+	// If set via ldflags, use it
+	if version != "" {
+		return version
+	}
+
+	// Try git describe (works when building from repo)
+	cmd := exec.Command("git", "describe", "--tags", "--abbrev=0")
+	out, err := cmd.Output()
+	if err == nil {
+		tag := strings.TrimSpace(string(out))
+		if strings.HasPrefix(tag, "v") {
+			return strings.TrimPrefix(tag, "v")
+		}
+		return tag
+	}
+
+	// Fallback
+	return "dev"
+}
 
 var rootCmd = &cobra.Command{
 	Use:   "forge",
@@ -18,7 +40,7 @@ It ensures the AI understands your intent, respects your restrictions,
 and executes only what was asked — nothing more.
 
 AI-agnostic. Works with Qwen, Claude, Gemini, GPT, or any coding assistant.`,
-	Version: version,
+	Version: detectVersion(),
 }
 
 func Execute() {
@@ -29,9 +51,4 @@ func Execute() {
 
 func init() {
 	rootCmd.SetVersionTemplate("forge-cli {{printf \"v%s\\n\" .Version}}")
-}
-
-func fail(format string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, "\n✗ Error: "+format+"\n", args...)
-	os.Exit(1)
 }
