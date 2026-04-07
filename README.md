@@ -85,14 +85,14 @@ forge/
 
 ### Install
 
-**From source (works now):**
+**From source:**
 ```bash
 git clone https://github.com/victorpothin/forge.git
 cd forge && go build -o forge .
 sudo mv forge /usr/local/bin/
 ```
 
-**Via go install (requires a release tag):**
+**Via go install:**
 ```bash
 go install github.com/victorpothin/forge@latest
 ```
