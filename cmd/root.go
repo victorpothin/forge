@@ -7,7 +7,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const version = "0.5.1"
+// Set via -ldflags at build time. Falls back to "dev" for local builds.
+var version = "dev"
 
 var rootCmd = &cobra.Command{
 	Use:   "forge",
@@ -27,11 +28,10 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.SetVersionTemplate(`forge-cli {{printf "v%s\n" .Version}}`)
+	rootCmd.SetVersionTemplate("forge-cli {{printf \"v%s\\n\" .Version}}")
 }
 
-// fail prints erro e sai com exit code 1.
 func fail(format string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, "\n❌ Error: "+format+"\n", args...)
+	fmt.Fprintf(os.Stderr, "\n✗ Error: "+format+"\n", args...)
 	os.Exit(1)
 }
