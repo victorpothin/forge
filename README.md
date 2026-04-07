@@ -85,16 +85,22 @@ forge/
 
 ### Install
 
-**From source:**
+**One command — just works:**
 ```bash
-git clone https://github.com/victorpothin/forge.git
-cd forge && go build -o forge .
-sudo mv forge /usr/local/bin/
+curl -fsSL https://raw.githubusercontent.com/victorpothin/forge/main/install.sh | bash
 ```
+
+Installs the binary and configures your PATH automatically. Requires Go.
 
 **Via go install:**
 ```bash
 go install github.com/victorpothin/forge@latest
+```
+
+**From source:**
+```bash
+git clone https://github.com/victorpothin/forge.git
+cd forge && make install
 ```
 
 ### Usage
