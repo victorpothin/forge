@@ -216,9 +216,11 @@ func downloadURL(url, tmpDir string) (string, error) {
 func cloneGit(repo, tmpDir string) (string, error) {
 	dest := filepath.Join(tmpDir, "repo")
 
-	// Normalize github.com/user/repo to https://github.com/user/repo.git
 	url := repo
-	if !strings.HasPrefix(url, "http") && !strings.HasPrefix(url, "git@") {
+	// Normalize: github.com/user/repo -> https://github.com/user/repo.git
+	if strings.HasPrefix(url, "github.com/") {
+		url = "https://" + url
+	} else if !strings.HasPrefix(url, "http") && !strings.HasPrefix(url, "git@") {
 		url = "https://github.com/" + url
 	}
 	if !strings.HasSuffix(url, ".git") {
