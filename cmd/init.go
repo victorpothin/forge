@@ -4,17 +4,32 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
-	
 	"github.com/victorpothin/forge/internal/templates"
 	"github.com/victorpothin/forge/internal/ui"
 	"github.com/spf13/cobra"
 )
 
+var allLayers = []string{
+	"context", "problem", "locked-path", "planning",
+	"execution", "testing", "documentation",
+}
+
+var layerDescriptions = map[string]string{
+	"context":       "Extract and validate project understanding",
+	"problem":       "Identify and prioritize what needs solving",
+	"locked-path":   "Register restrictions and off-limits approaches",
+	"planning":      "Decompose problems into ordered tasks",
+	"execution":     "Task-by-task implementation, strictly scoped",
+	"testing":       "Validation built into each task delivery",
+	"documentation": "Generate docs from what was actually built",
+}
+
 func init() {
-	var initDir, ai, model, gateMode string
+	var initDir, ai, model, gateMode, layersStr string
 	var yes, force bool
 
 	initCmd := &cobra.Command{
@@ -22,32 +37,34 @@ func init() {
 		Short: "Initialize FORGE method in a project",
 		Long: `Initialize the FORGE method in the current (or specified) project.
 
-This command creates:
-  - FORGE.md          The master template with 7 execution layers
-  - .forgerc.json     Configuration file for AI model and gate behavior
-  - skills/           All skill files for the selected AI model
-
 Examples:
-  forge init                    # Interactive wizard
-  forge init --ai qwen          # Non-interactive with specific AI
-  forge init --ai claude -y     # Skip confirmation
-  forge init --ai gpt --force   # Overwrite existing files`,
+  forge init                           # Interactive wizard
+  forge init --ai qwen -y              # Non-interactive, all layers
+  forge init --ai claude --layers context,problem,execution -y`,
 		Run: func(cmd *cobra.Command, args []string) {
-			runInit(initDir, ai, model, gateMode, yes, force)
+			var layers []string
+			if layersStr != "" {
+				layers = strings.Split(layersStr, ",")
+				for i := range layers {
+					layers[i] = strings.TrimSpace(layers[i])
+				}
+			}
+			runInit(initDir, ai, model, gateMode, layers, yes, force)
 		},
 	}
 
 	initCmd.Flags().StringVarP(&initDir, "dir", "d", ".", "Target directory")
 	initCmd.Flags().StringVarP(&ai, "ai", "a", "", "AI model: qwen, claude, gpt, gemini, custom")
-	initCmd.Flags().StringVarP(&model, "model", "m", "", "Model name for documentation (e.g. 'qwen-code')")
+	initCmd.Flags().StringVarP(&model, "model", "m", "", "Model name for documentation")
 	initCmd.Flags().StringVarP(&gateMode, "gate-mode", "g", "", "Gate mode: strict (default) or auto")
+	initCmd.Flags().StringVarP(&layersStr, "layers", "L", "", "Comma-separated layers (default: all 7)")
 	initCmd.Flags().BoolVarP(&yes, "yes", "y", false, "Skip confirmation prompts")
 	initCmd.Flags().BoolVar(&force, "force", false, "Overwrite existing FORGE files")
 
 	rootCmd.AddCommand(initCmd)
 }
 
-func runInit(dir, ai, model, gateMode string, yes, force bool) {
+func runInit(dir, ai, model, gateMode string, selLayers []string, yes, force bool) {
 	ui.Banner(version)
 
 	target, err := filepath.Abs(dir)
@@ -61,21 +78,34 @@ func runInit(dir, ai, model, gateMode string, yes, force bool) {
 		return
 	}
 
-	// --- Gather config (smart defaults when --ai is set) ---
+	// --- Gather config ---
 	hasAI := ai != ""
 	ai = gatherAI(ai)
 	gateMode = gatherGateMode(gateMode, hasAI)
 	model = gatherModel(model, ai, hasAI)
 
+	// Layer selection
+	if len(selLayers) == 0 {
+		selLayers = gatherLayers()
+	}
+
 	// --- Show plan ---
-	ui.Section("Configuration")
-	ui.PrintConfig("AI model", ui.Red.Sprintf("%s", ai), ui.Dim.Sprintf("(%s)", model))
-	ui.PrintConfig("Gate mode", ui.Green.Sprint(gateMode))
+	ui.PrintHeader("Configuration")
+	ui.PrintConfig("AI model", fmt.Sprintf("%s (%s)", ai, model))
+	ui.PrintConfig("Gate mode", gateMode)
 	ui.PrintConfig("Target", target)
 	fmt.Println()
 
+	ui.PrintHeader("Layers")
+	for _, l := range allLayers {
+		if contains(selLayers, l) {
+			fmt.Printf("  ✓ %s\n", l)
+		}
+	}
+	fmt.Println()
+
 	skillPath := templates.SkillPathFor(ai)
-	ui.Section("Files to create")
+	ui.PrintHeader("Files to create")
 
 	filesToCreate := []string{}
 	if !templates.HasForgeMD(target) || force {
@@ -95,14 +125,12 @@ func runInit(dir, ai, model, gateMode string, yes, force bool) {
 	}
 	ui.PrintFileListPending(filesToCreate)
 	fmt.Println()
+	ui.Dim.Println("  Press Ctrl+C at any prompt to quit.")
+	fmt.Println()
 
 	if !yes && !force {
 		ok := false
-		prompt := &survey.Confirm{
-			Message: "Proceed?",
-			Default: true,
-		}
-		survey.AskOne(prompt, &ok)
+		ui.Ask(&survey.Confirm{Message: "Proceed?", Default: true}, &ok)
 		if !ok {
 			fmt.Println()
 			ui.Dim.Println("  Aborted.")
@@ -111,10 +139,9 @@ func runInit(dir, ai, model, gateMode string, yes, force bool) {
 		}
 	}
 
-	// --- Execute with animations ---
+	// --- Execute ---
 	fmt.Println()
 
-	// 1. Copy FORGE.md
 	spinner := ui.NewSpinner("Copying FORGE.md")
 	spinner.Start()
 	time.Sleep(300 * time.Millisecond)
@@ -127,11 +154,17 @@ func runInit(dir, ai, model, gateMode string, yes, force bool) {
 		spinner.StopWith("– FORGE.md (skipped)")
 	}
 
-	// 2. Generate .forgerc.json
 	spinner2 := ui.NewSpinner("Generating .forgerc.json")
 	spinner2.Start()
 	time.Sleep(200 * time.Millisecond)
-	configStr, err := templates.GenerateForgeConfig(ai, model, gateMode)
+
+	// Build layers map from selection
+	layersMap := make(map[string]bool)
+	for _, l := range allLayers {
+		layersMap[l] = contains(selLayers, l)
+	}
+
+	configStr, err := templates.GenerateForgeConfigWithLayers(ai, model, gateMode, layersMap)
 	if err != nil {
 		spinner2.StopWith("✗ .forgerc.json: %v", err)
 	} else {
@@ -142,7 +175,6 @@ func runInit(dir, ai, model, gateMode string, yes, force bool) {
 		}
 	}
 
-	// 3. Copy skills
 	spinner3 := ui.NewSpinner("Copying skill files")
 	spinner3.Start()
 	time.Sleep(200 * time.Millisecond)
@@ -161,12 +193,39 @@ func runInit(dir, ai, model, gateMode string, yes, force bool) {
 	ui.PrintSuccessBox(target)
 	fmt.Println()
 	ui.Dim.Println("Next steps:")
-	ui.Green.Println("  1. Open FORGE.md in your project")
+	fmt.Println("  1. Open FORGE.md in your project")
 	fmt.Printf("  2. Start a session with your AI (%s)\n", ai)
 	ui.Dim.Println("  3. Reference FORGE.md and begin Layer 1")
 	fmt.Println()
-	ui.Dim.Println("  Run 'forge doctor' to verify setup")
+	ui.Dim.Println("  Run 'forge edit' to add/remove layers later")
 	fmt.Println()
+}
+
+func gatherLayers() []string {
+	opts := make([]string, len(allLayers))
+	for i, l := range allLayers {
+		opts[i] = fmt.Sprintf("%s — %s", l, layerDescriptions[l])
+	}
+
+	var selected []string
+	ui.Ask(&survey.MultiSelect{
+		Message: "Which FORGE layers do you want?",
+		Options: opts,
+		Default: opts, // all checked
+	}, &selected)
+
+	// Extract layer names
+	var layers []string
+	for _, s := range selected {
+		// Take the part before " — "
+		idx := strings.Index(s, " — ")
+		if idx > 0 {
+			layers = append(layers, s[:idx])
+		} else {
+			layers = append(layers, s)
+		}
+	}
+	return layers
 }
 
 func gatherAI(ai string) string {
@@ -179,11 +238,10 @@ func gatherAI(ai string) string {
 	}
 
 	var answer string
-	prompt := &survey.Select{
+	ui.Ask(&survey.Select{
 		Message: "Which AI model are you using?",
 		Options: buildAIOptions(),
-	}
-	survey.AskOne(prompt, &answer)
+	}, &answer)
 	for _, valid := range templates.SupportedAI() {
 		if answer == valid {
 			return valid
@@ -210,15 +268,11 @@ func gatherGateMode(gateMode string, hasAIFlag bool) string {
 	}
 
 	var answer string
-	prompt := &survey.Select{
+	ui.Ask(&survey.Select{
 		Message: "Gate mode?",
-		Options: []string{
-			"strict",
-			"auto",
-		},
+		Options: []string{"strict", "auto"},
 		Default: "strict",
-	}
-	survey.AskOne(prompt, &answer)
+	}, &answer)
 	return answer
 }
 
@@ -240,11 +294,10 @@ func gatherModel(model, ai string, hasAIFlag bool) string {
 	}
 
 	var answer string
-	prompt := &survey.Input{
+	ui.Ask(&survey.Input{
 		Message: "Model name:",
 		Default: defaultModel,
-	}
-	survey.AskOne(prompt, &answer)
+	}, &answer)
 	if answer == "" {
 		return defaultModel
 	}
@@ -268,4 +321,13 @@ func joinAIList() string {
 		result += ai
 	}
 	return result
+}
+
+func contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
 }

@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/fatih/color"
 	"github.com/victorpothin/forge/internal/ui"
 	"github.com/spf13/cobra"
 )
@@ -22,7 +21,6 @@ type githubRelease struct {
 	TagName     string `json:"tag_name"`
 	Name        string `json:"name"`
 	PublishedAt string `json:"published_at"`
-	HTMLURL     string `json:"html_url"`
 }
 
 func init() {
@@ -34,27 +32,26 @@ func init() {
 		Long: `Check for updates and upgrade the FORGE CLI binary.
 
 Examples:
-  forge update          # Check and prompt for update
-  forge update -y       # Auto-update if available
-  forge update --check  # Only check, don't download`,
+  forge update
+  forge update -y`,
 		Run: func(cmd *cobra.Command, args []string) {
 			runUpdate(updateYes)
 		},
 	}
 
-	updateCmd.Flags().BoolVarP(&updateYes, "yes", "y", false, "Skip confirmation, auto-update")
+	updateCmd.Flags().BoolVarP(&updateYes, "yes", "y", false, "Skip confirmation")
 	rootCmd.AddCommand(updateCmd)
 }
 
 func runUpdate(yes bool) {
 	ui.Banner(version)
 
-	spinner := ui.NewSpinner("Checking for updates...")
+	spinner := ui.NewSpinner("Checking for updates")
 	spinner.Start()
 
 	latest, err := fetchLatestRelease()
 	if err != nil {
-		spinner.StopWith("✗ %s", color.New(color.FgRed).Sprintf("Failed to check for updates: %v", err))
+		spinner.StopWith("✗ Failed to check for updates: %v", err)
 		return
 	}
 
@@ -64,24 +61,20 @@ func runUpdate(yes bool) {
 	spinner.Stop()
 
 	if versionGreaterOrEqual(currentVer, latestVer) {
-		ui.PrintBox(
-			color.New(color.FgGreen, color.Bold).Sprint("  ✓ Up to date"),
-			fmt.Sprintf("  You're running the latest version (v%s)", currentVer),
-		)
+		ui.PrintSuccess(fmt.Sprintf("Up to date (v%s)", currentVer))
 		fmt.Println()
 		return
 	}
 
 	fmt.Printf("  New version available: %s → %s\n",
-		color.New(color.FgYellow).Sprint("v"+currentVer),
-		color.New(color.FgGreen, color.Bold).Sprint("v"+latestVer))
+		currentVer, ui.Green.Sprint(latestVer))
 	fmt.Printf("  Released: %s\n", formatTime(latest.PublishedAt))
 	fmt.Println()
 
 	if !yes {
 		ok := false
-		survey.AskOne(&survey.Confirm{
-			Message: "Update to v" + latestVer + "?",
+		ui.Ask(&survey.Confirm{
+			Message: "Update to " + latestVer + "?",
 			Default: true,
 		}, &ok)
 		if !ok {
@@ -90,8 +83,7 @@ func runUpdate(yes bool) {
 		}
 	}
 
-	// Perform update
-	spinner2 := ui.NewSpinner("Updating forge CLI...")
+	spinner2 := ui.NewSpinner("Updating forge CLI")
 	spinner2.Start()
 
 	cmd := exec.Command("go", "install", "github.com/victorpothin/forge@latest")
@@ -99,11 +91,11 @@ func runUpdate(yes bool) {
 	cmd.Stderr = io.Discard
 	err = cmd.Run()
 	if err != nil {
-		spinner2.StopWith("✗ %s", color.New(color.FgRed).Sprintf("Update failed: %v", err))
+		spinner2.StopWith("✗ Update failed: %v", err)
 		return
 	}
 
-	// Verify new version
+	// Verify
 	gopath := os.Getenv("GOPATH")
 	if gopath == "" {
 		gopath = os.Getenv("HOME") + "/go"
@@ -111,16 +103,16 @@ func runUpdate(yes bool) {
 	binPath := gopath + "/bin/forge"
 
 	checkCmd := exec.Command(binPath, "--version")
-	checkOut, err := checkCmd.CombinedOutput()
+	checkOut, _ := checkCmd.CombinedOutput()
 	if err != nil {
-		spinner2.StopWith("✓ Updated to v%s", color.New(color.FgGreen).Sprint(latestVer))
+		spinner2.StopWith("✓ Updated to %s", ui.Green.Sprint(latestVer))
 	} else {
 		newVer := strings.TrimSpace(strings.TrimPrefix(string(checkOut), "forge-cli "))
-		spinner2.StopWith("✓ Updated to %s", color.New(color.FgGreen, color.Bold).Sprint(newVer))
+		spinner2.StopWith("✓ Updated to %s", ui.Green.Sprint(newVer))
 	}
 
 	fmt.Println()
-	ui.Dim.Println("The CLI has been updated. Restart your terminal if forge was already loaded.")
+	ui.Dim.Println("Restart your terminal if forge was already loaded.")
 	fmt.Println()
 }
 
@@ -130,8 +122,6 @@ func fetchLatestRelease() (*githubRelease, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	// GitHub API requires User-Agent
 	req.Header.Set("User-Agent", "forge-cli/"+version)
 
 	resp, err := client.Do(req)
@@ -157,17 +147,10 @@ func fetchLatestRelease() (*githubRelease, error) {
 	return &release, nil
 }
 
-// versionGreaterOrEqual compares semver-ish version strings.
-// Handles "v0.1.0", "0.1.0", etc.
 func versionGreaterOrEqual(current, latest string) bool {
 	if current == latest {
 		return true
 	}
-	// Simple comparison: if current starts with latest, treat as equal
-	if strings.HasPrefix(current, latest) || strings.HasPrefix(latest, current) {
-		return current == latest
-	}
-	// Fallback: string comparison (works for most semver cases)
 	return current > latest
 }
 

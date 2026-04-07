@@ -1,35 +1,49 @@
-// Package ui provides themed console output for the FORGE CLI.
-// Theme: red/forge — bold, warm, intense.
+// Package ui provides clean, minimal console output for the FORGE CLI.
 package ui
 
 import (
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/AlecAivazis/survey/v2"
 )
 
 func init() {
-	// Force colors even when piped or in CI
 	color.NoColor = false
 }
 
 // -- Colors ------------------------------------------------------------------
 
 var (
+	Bold    = color.New(color.Bold)
+	Dim     = color.New(color.Faint)
+	Green   = color.New(color.FgGreen, color.Bold)
 	Red     = color.New(color.FgRed, color.Bold)
-	Green   = color.New(color.FgGreen)
 	Yellow  = color.New(color.FgYellow)
 	Cyan    = color.New(color.FgCyan)
-	White   = color.New(color.FgWhite)
-	Dim     = color.New(color.Faint)
-	Bold    = color.New(color.Bold)
-	RedBold = color.New(color.FgRed, color.Bold)
-	GreenB  = color.New(color.FgGreen, color.Bold)
 )
+
+// -- Survey helper ------------------------------------------------------------
+
+// Ask wraps survey.AskOne with Ctrl+C exit message.
+func Ask(prompt survey.Prompt, response interface{}, opts ...survey.AskOpt) error {
+	// Catch Ctrl+C globally
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		fmt.Println()
+		Dim.Println("  Quit (Ctrl+C)")
+		os.Exit(0)
+	}()
+	return survey.AskOne(prompt, response, opts...)
+}
 
 // -- Spinner -----------------------------------------------------------------
 
@@ -44,7 +58,6 @@ type Spinner struct {
 
 var spinnerFrames = []string{"◜", "◝", "◞", "◟"}
 
-// NewSpinner creates a new spinner with the given message.
 func NewSpinner(message string) *Spinner {
 	return &Spinner{
 		frames:  spinnerFrames,
@@ -53,7 +66,6 @@ func NewSpinner(message string) *Spinner {
 	}
 }
 
-// Start begins the spinner animation.
 func (s *Spinner) Start() {
 	s.mu.Lock()
 	if s.running {
@@ -76,14 +88,13 @@ func (s *Spinner) Start() {
 				s.mu.Lock()
 				frame := s.frames[s.current%len(s.frames)]
 				s.current++
-				fmt.Printf("\r  %s %s", Red.Sprint(frame), s.message)
+				fmt.Printf("\r  %s  %s", frame, s.message)
 				s.mu.Unlock()
 			}
 		}
 	}()
 }
 
-// Stop halts the spinner and clears the line.
 func (s *Spinner) Stop() {
 	s.mu.Lock()
 	if !s.running {
@@ -97,7 +108,6 @@ func (s *Spinner) Stop() {
 	fmt.Print("\r\033[K")
 }
 
-// StopWith replaces the spinner line with a final message.
 func (s *Spinner) StopWith(format string, args ...interface{}) {
 	s.mu.Lock()
 	if !s.running {
@@ -116,17 +126,9 @@ func (s *Spinner) StopWith(format string, args ...interface{}) {
 
 // -- Banner ------------------------------------------------------------------
 
-const bannerLines = `
-┌──────────────────────────────────────┐
-│       FORGE CLI                      │
-│  Focused, Ordered, Restricted,       │
-│  Guided Execution                    │`
-
 func Banner(ver string) {
 	fmt.Println()
-	fmt.Println(RedBold.Sprint(bannerLines))
-	fmt.Printf("│  %-36s│\n", "v"+ver)
-	fmt.Println(RedBold.Sprint("└──────────────────────────────────────┘"))
+	fmt.Println(Bold.Sprint("  FORGE CLI  " + "v" + ver))
 	fmt.Println()
 }
 
@@ -134,31 +136,26 @@ func Banner(ver string) {
 
 func Section(title string) {
 	fmt.Println()
-	RedBold.Printf("── %s ──\n", title)
+	fmt.Println(Bold.Sprint("  " + title))
 	fmt.Println()
 }
 
 func PrintHeader(title string) {
-	Bold.Printf("📋 %s:\n", title)
+	Bold.Printf("  %s:\n", title)
 }
 
-func PrintConfig(key, value string, extra ...string) {
-	Dim.Printf("  %-12s ", key+":")
-	White.Printf("%s", value)
-	if len(extra) > 0 {
-		fmt.Print(" " + extra[0])
-	}
-	fmt.Println()
+func PrintConfig(key, value string) {
+	Dim.Printf("    %-12s %s\n", key+":", value)
 }
 
 func PrintFileListPending(files []string) {
 	for _, f := range files {
-		Red.Printf("  ✅ %s\n", f)
+		fmt.Printf("  ✅ %s\n", f)
 	}
 }
 
 func PrintSuccess(message string) {
-	GreenB.Printf("  ✓ %s\n", message)
+	Green.Printf("  ✓ %s\n", message)
 }
 
 func PrintInfo(message string) {
@@ -166,27 +163,14 @@ func PrintInfo(message string) {
 }
 
 func PrintError(format string, args ...interface{}) {
-	Red.Fprintf(os.Stderr, "\n❌ Error: "+format+"\n", args...)
+	Red.Fprintf(os.Stderr, "\n✗ Error: "+format+"\n", args...)
 }
 
 func PrintWarning(message string) {
-	Yellow.Printf("  ⚠️  %s\n", message)
-}
-
-func PrintSuccessBox(target string) {
-	lines := []string{
-		GreenB.Sprint("  ✓ FORGE initialized"),
-		fmt.Sprintf("    %s", target),
-	}
-	printBox(lines)
+	Yellow.Printf("  ⚠  %s\n", message)
 }
 
 func PrintBox(lines ...string) {
-	printBox(lines)
-}
-
-func printBox(lines []string) {
-	// Calculate max visible width
 	maxW := 0
 	for _, l := range lines {
 		w := visibleLen(l)
@@ -195,21 +179,20 @@ func printBox(lines []string) {
 		}
 	}
 
-	border := "─" + strings.Repeat("─", maxW) + "─"
-	top := "┌" + border + "┐"
-	bot := "└" + border + "┘"
-
-	fmt.Println("  " + RedBold.Sprint(top))
+	border := strings.Repeat("─", maxW+4)
+	fmt.Println("  ┌" + border + "┐")
 	for _, l := range lines {
 		padding := maxW - visibleLen(l)
-		fmt.Printf("  %s %s%s %s\n",
-			RedBold.Sprint("│"),
-			l,
-			strings.Repeat(" ", padding),
-			RedBold.Sprint("│"),
-		)
+		fmt.Printf("  │ %s%s │\n", l, strings.Repeat(" ", padding))
 	}
-	fmt.Println("  " + RedBold.Sprint(bot))
+	fmt.Println("  └" + border + "┘")
+}
+
+func PrintSuccessBox(target string) {
+	PrintBox(
+		Green.Sprint("FORGE initialized"),
+		Dim.Sprint("  "+target),
+	)
 }
 
 // visibleLen returns string length ignoring ANSI escape codes.

@@ -31,22 +31,27 @@ type ForgeConfig struct {
 	ResponseLanguage string            `json:"response_language"`
 }
 
-// GenerateForgeConfig creates a .forgerc.json content string.
+// GenerateForgeConfig creates a .forgerc.json content string with all layers enabled.
 func GenerateForgeConfig(ai, model, gateMode string) (string, error) {
+	return GenerateForgeConfigWithLayers(ai, model, gateMode, map[string]bool{
+		"context":       true,
+		"problem":       true,
+		"locked_path":   true,
+		"planning":      true,
+		"execution":     true,
+		"testing":       true,
+		"documentation": true,
+	})
+}
+
+// GenerateForgeConfigWithLayers creates a .forgerc.json content string with specific layers.
+func GenerateForgeConfigWithLayers(ai, model, gateMode string, layers map[string]bool) (string, error) {
 	config := ForgeConfig{
-		AI:       ai,
-		Model:    model,
-		GateMode: gateMode,
-		SkillsDir: "skills/",
-		Layers: map[string]bool{
-			"context":       true,
-			"problem":       true,
-			"locked_path":   true,
-			"planning":      true,
-			"execution":     true,
-			"testing":       true,
-			"documentation": true,
-		},
+		AI:               ai,
+		Model:            model,
+		GateMode:         gateMode,
+		SkillsDir:        "skills/",
+		Layers:           layers,
 		LayerAI:          map[string]string{},
 		ResponseLanguage: "en",
 	}
@@ -57,6 +62,29 @@ func GenerateForgeConfig(ai, model, gateMode string) (string, error) {
 	}
 
 	return string(data) + "\n", nil
+}
+
+// UpdateForgeLayers reads .forgerc.json, updates the layers map, and writes it back.
+func UpdateForgeLayers(target string, layers map[string]bool) error {
+	path := filepath.Join(target, ".forgerc.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("read .forgerc.json: %w", err)
+	}
+
+	var config ForgeConfig
+	if err := json.Unmarshal(data, &config); err != nil {
+		return fmt.Errorf("parse .forgerc.json: %w", err)
+	}
+
+	config.Layers = layers
+
+	out, err := json.MarshalIndent(config, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal config: %w", err)
+	}
+
+	return os.WriteFile(path, append(out, '\n'), 0644)
 }
 
 // SkillTargets maps AI model names to skill destination paths.
