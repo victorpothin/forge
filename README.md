@@ -106,21 +106,24 @@ cd forge && make install
 ### Usage
 
 ```bash
-# Interactive wizard
-forge init
+# Initialize a project
+forge init                          # Interactive wizard
+forge init --ai qwen -y             # Non-interactive
+forge init --ai claude -m claude-sonnet-4 --force
 
-# Non-interactive — just specify the AI
-forge init --ai qwen -y
-
-# Override defaults
-forge init --ai claude --model claude-sonnet-4-20250514 --gate-mode strict -y
-
-# Force overwrite existing files
-forge init --ai gpt --force -y
+# Manage skills
+forge skill add                     # Interactive import
+forge skill add --from ./my-skill --layer execution
+forge skill add --from github.com/user/my-skill --layer planning
+forge skill list                    # Show skills by layer
 
 # Check project health
 forge doctor
 forge doctor --dir /path/to/project
+
+# Keep CLI up to date
+forge update                        # Check and prompt
+forge update -y                     # Auto-update
 ```
 
 ### Commands
@@ -128,7 +131,10 @@ forge doctor --dir /path/to/project
 | Command | Description |
 |---|---|
 | `forge init` | Initialize FORGE in a project (interactive or flags) |
+| `forge skill add` | Import a skill from local dir, URL, or git repo |
+| `forge skill list` | List all skills organized by layer |
 | `forge doctor` | Check if FORGE is properly set up |
+| `forge update` | Check for updates and self-update the CLI |
 | `forge --version` | Show CLI version |
 
 ### Init flags
@@ -141,6 +147,15 @@ forge doctor --dir /path/to/project
 | `--dir <path>` | `-d` | Target directory (default: `.`) |
 | `--yes` | `-y` | Skip confirmation |
 | `--force` | | Overwrite existing FORGE files |
+
+### Skill flags
+
+| Flag | Short | Description |
+|---|---|---|
+| `--from <source>` | | Source: local path, URL, or `github.com/user/repo` |
+| `--layer <layer>` | `-l` | Target: `context`, `problem`, `locked-path`, `planning`, `execution`, `testing`, `docs` |
+| `--dir <path>` | `-d` | Target project directory (default: `.`) |
+| `--force` | | Overwrite existing skill |
 
 ### Manual setup (no CLI)
 
