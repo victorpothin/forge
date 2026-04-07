@@ -1,17 +1,31 @@
-# Go build
+# Go build artifacts
 forge
 cli/forge
-
-# Go test
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
 *.test
-
-# IDE
-.vscode/
-.idea/
+*.out
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Qwen
+# AI agent directories — these are generated per-project by AI tools
 .qwen/
+.claude/
+.gemini/
+.codex/
+.cursor/
+.windsurf/
+
+# IDE
+.vscode/
+.idea/
+
+# Editor backups
+*~
+*.swp
+*.swo
