@@ -31,7 +31,7 @@ echo -e "  ${GREEN}✓${NC} Go found: $(go version | awk '{print $3}')"
 
 # --- Install binary ---
 echo -e "\n${CYAN}⟳ Installing forge...${NC}"
-go install github.com/victorpothin/forge@v0.2.1
+go install github.com/victorpothin/forge@latest
 echo -e "  ${GREEN}✓${NC} forge installed to $(go env GOPATH)/bin/forge"
 
 # --- PATH setup ---
