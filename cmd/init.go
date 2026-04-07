@@ -7,16 +7,10 @@ import (
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/fatih/color"
+	
 	"github.com/victorpothin/forge/internal/templates"
 	"github.com/victorpothin/forge/internal/ui"
 	"github.com/spf13/cobra"
-)
-
-var (
-	green = color.New(color.FgGreen)
-	dim   = color.New(color.Faint)
-	red   = color.New(color.FgRed, color.Bold)
 )
 
 func init() {
@@ -74,14 +68,14 @@ func runInit(dir, ai, model, gateMode string, yes, force bool) {
 	model = gatherModel(model, ai, hasAI)
 
 	// --- Show plan ---
-	ui.PrintHeader("Configuration")
-	ui.PrintConfig("AI model", fmt.Sprintf("%s (%s)", ai, model))
-	ui.PrintConfig("Gate mode", gateMode)
+	ui.Section("Configuration")
+	ui.PrintConfig("AI model", ui.Red.Sprintf("%s", ai), ui.Dim.Sprintf("(%s)", model))
+	ui.PrintConfig("Gate mode", ui.Green.Sprint(gateMode))
 	ui.PrintConfig("Target", target)
 	fmt.Println()
 
 	skillPath := templates.SkillPathFor(ai)
-	ui.PrintHeader("Files to create/overwrite")
+	ui.Section("Files to create")
 
 	filesToCreate := []string{}
 	if !templates.HasForgeMD(target) || force {
@@ -111,7 +105,7 @@ func runInit(dir, ai, model, gateMode string, yes, force bool) {
 		survey.AskOne(prompt, &ok)
 		if !ok {
 			fmt.Println()
-			dim.Println("  Aborted.")
+			ui.Dim.Println("  Aborted.")
 			fmt.Println()
 			return
 		}
@@ -121,62 +115,57 @@ func runInit(dir, ai, model, gateMode string, yes, force bool) {
 	fmt.Println()
 
 	// 1. Copy FORGE.md
-	spinner := ui.NewSpinner("Copying FORGE.md...")
+	spinner := ui.NewSpinner("Copying FORGE.md")
 	spinner.Start()
 	time.Sleep(300 * time.Millisecond)
 	copied, err := templates.CopyForgeMD(target, force)
 	if err != nil {
-		spinner.StopWith("%s FORGE.md: %v", red.Sprintf("✗"), err)
+		spinner.StopWith("✗ FORGE.md: %v", err)
 	} else if copied {
-		spinner.StopWith("%s FORGE.md", green.Sprintf("✓"))
+		spinner.StopWith("✓ FORGE.md")
 	} else {
-		spinner.StopWith("%s FORGE.md (exists)", dim.Sprint("–"))
+		spinner.StopWith("– FORGE.md (skipped)")
 	}
 
 	// 2. Generate .forgerc.json
-	spinner2 := ui.NewSpinner("Generating .forgerc.json...")
+	spinner2 := ui.NewSpinner("Generating .forgerc.json")
 	spinner2.Start()
 	time.Sleep(200 * time.Millisecond)
 	configStr, err := templates.GenerateForgeConfig(ai, model, gateMode)
 	if err != nil {
-		spinner2.StopWith("%s .forgerc.json: %v", red.Sprintf("✗"), err)
+		spinner2.StopWith("✗ .forgerc.json: %v", err)
 	} else {
 		if err := os.WriteFile(filepath.Join(target, ".forgerc.json"), []byte(configStr), 0644); err != nil {
-			spinner2.StopWith("%s .forgerc.json: %v", red.Sprintf("✗"), err)
+			spinner2.StopWith("✗ .forgerc.json: %v", err)
 		} else {
-			spinner2.StopWith("%s .forgerc.json", green.Sprintf("✓"))
+			spinner2.StopWith("✓ .forgerc.json")
 		}
 	}
 
-	// 3. Copy skills with progress
-	spinner3 := ui.NewSpinner("Copying skill files...")
+	// 3. Copy skills
+	spinner3 := ui.NewSpinner("Copying skill files")
 	spinner3.Start()
 	time.Sleep(200 * time.Millisecond)
 	skills, err := templates.CopySkills(target, ai, force)
 	if err != nil {
-		spinner3.StopWith("%s skills: %v", red.Sprintf("✗"), err)
+		spinner3.StopWith("✗ skills: %v", err)
 	} else {
-		totalLayers := len(templates.SupportedAI())
-		_ = totalLayers
-		spinner3.StopWith("%s %d skill layers copied", green.Sprintf("✓"), len(skills))
+		spinner3.StopWith("✓ %d skill layers copied", len(skills))
 		for _, s := range skills {
-			dim.Printf("    %s\n", s)
+			ui.Dim.Printf("    %s\n", s)
 		}
 	}
 
 	// --- Summary ---
 	fmt.Println()
-	ui.PrintBox(
-		red.Sprint("  FORGE initialized"),
-		fmt.Sprintf("  in %s", target),
-	)
+	ui.PrintSuccessBox(target)
 	fmt.Println()
-	dim.Println("Next steps:")
-	green.Println("  1. Open FORGE.md in your project")
+	ui.Dim.Println("Next steps:")
+	ui.Green.Println("  1. Open FORGE.md in your project")
 	fmt.Printf("  2. Start a session with your AI (%s)\n", ai)
-	dim.Println("  3. Reference FORGE.md and begin Layer 1")
+	ui.Dim.Println("  3. Reference FORGE.md and begin Layer 1")
 	fmt.Println()
-	dim.Println("  Run 'forge doctor' to verify setup")
+	ui.Dim.Println("  Run 'forge doctor' to verify setup")
 	fmt.Println()
 }
 

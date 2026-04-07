@@ -12,22 +12,27 @@ import (
 	"github.com/fatih/color"
 )
 
+func init() {
+	// Force colors even when piped or in CI
+	color.NoColor = false
+}
+
 // -- Colors ------------------------------------------------------------------
 
 var (
 	Red     = color.New(color.FgRed, color.Bold)
-	Yellow  = color.New(color.FgYellow)
 	Green   = color.New(color.FgGreen)
+	Yellow  = color.New(color.FgYellow)
 	Cyan    = color.New(color.FgCyan)
 	White   = color.New(color.FgWhite)
 	Dim     = color.New(color.Faint)
 	Bold    = color.New(color.Bold)
 	RedBold = color.New(color.FgRed, color.Bold)
+	GreenB  = color.New(color.FgGreen, color.Bold)
 )
 
 // -- Spinner -----------------------------------------------------------------
 
-// Spinner represents an animated loading spinner.
 type Spinner struct {
 	mu      sync.Mutex
 	stopCh  chan struct{}
@@ -37,9 +42,7 @@ type Spinner struct {
 	running bool
 }
 
-var spinnerFrames = []string{
-	"◜", "◝", "◞", "◟",
-}
+var spinnerFrames = []string{"◜", "◝", "◞", "◟"}
 
 // NewSpinner creates a new spinner with the given message.
 func NewSpinner(message string) *Spinner {
@@ -90,7 +93,6 @@ func (s *Spinner) Stop() {
 	s.running = false
 	s.mu.Unlock()
 	close(s.stopCh)
-	// Give a tick for the goroutine to exit
 	time.Sleep(20 * time.Millisecond)
 	fmt.Print("\r\033[K")
 }
@@ -108,76 +110,55 @@ func (s *Spinner) StopWith(format string, args ...interface{}) {
 	close(s.stopCh)
 	time.Sleep(20 * time.Millisecond)
 
-	msg := fmt.Sprintf(format, args...)
-	// Clear the spinner line completely
 	fmt.Print("\r\033[K")
-	fmt.Printf("  %s\n", msg)
-}
-
-// -- Progress bar ------------------------------------------------------------
-
-func ProgressBar(done, total int, width int) string {
-	if total == 0 {
-		total = 1
-	}
-	if width == 0 {
-		width = 30
-	}
-
-	filled := (done * width) / total
-	empty := width - filled
-
-	bar := ""
-	for i := 0; i < filled; i++ {
-		bar += RedBold.Sprint("█")
-	}
-	emptyBar := strings.Repeat("·", empty)
-
-	pct := (done * 100) / total
-	return fmt.Sprintf("[%s%s] %d%%", bar, emptyBar, pct)
+	fmt.Printf("  "+format+"\n", args...)
 }
 
 // -- Banner ------------------------------------------------------------------
 
-const banner = `
+const bannerLines = `
 ┌──────────────────────────────────────┐
 │       FORGE CLI                      │
 │  Focused, Ordered, Restricted,       │
 │  Guided Execution                    │`
 
-func Banner(version string) {
+func Banner(ver string) {
 	fmt.Println()
-	fmt.Println(banner)
-	fmt.Printf("│  %-36s│\n", "v"+version)
-	fmt.Println("└──────────────────────────────────────┘")
+	fmt.Println(RedBold.Sprint(bannerLines))
+	fmt.Printf("│  %-36s│\n", "v"+ver)
+	fmt.Println(RedBold.Sprint("└──────────────────────────────────────┘"))
 	fmt.Println()
 }
 
 // -- Helpers -----------------------------------------------------------------
 
+func Section(title string) {
+	fmt.Println()
+	RedBold.Printf("── %s ──\n", title)
+	fmt.Println()
+}
+
 func PrintHeader(title string) {
 	Bold.Printf("📋 %s:\n", title)
 }
 
-func PrintConfig(key, value string) {
+func PrintConfig(key, value string, extra ...string) {
 	Dim.Printf("  %-12s ", key+":")
-	White.Printf("%s\n", value)
-}
-
-func PrintFileList(files []string) {
-	for _, f := range files {
-		Green.Printf("  ✓ %s\n", f)
+	White.Printf("%s", value)
+	if len(extra) > 0 {
+		fmt.Print(" " + extra[0])
 	}
+	fmt.Println()
 }
 
 func PrintFileListPending(files []string) {
 	for _, f := range files {
-		White.Printf("  ✅ %s\n", f)
+		Red.Printf("  ✅ %s\n", f)
 	}
 }
 
 func PrintSuccess(message string) {
-	Green.Printf("  ✓ %s\n", message)
+	GreenB.Printf("  ✓ %s\n", message)
 }
 
 func PrintInfo(message string) {
@@ -192,54 +173,61 @@ func PrintWarning(message string) {
 	Yellow.Printf("  ⚠️  %s\n", message)
 }
 
-func PrintBox(lines ...string) {
-	maxLen := 0
-	for _, l := range lines {
-		// Strip ANSI color codes for width calc
-		clean := l
-		for i := 0; i < len(clean); {
-			if clean[i] == '\033' {
-				j := i
-				for j < len(clean) && clean[j] != 'm' {
-					j++
-				}
-				clean = clean[:i] + clean[j+1:]
-			} else {
-				i++
-			}
-		}
-		if len(clean) > maxLen {
-			maxLen = len(clean)
-		}
+func PrintSuccessBox(target string) {
+	lines := []string{
+		GreenB.Sprint("  ✓ FORGE initialized"),
+		fmt.Sprintf("    %s", target),
 	}
-
-	border := strings.Repeat("─", maxLen+4)
-	fmt.Println("  ┌" + border + "┐")
-	for _, l := range lines {
-		// Calculate visible length (strip ANSI codes)
-		visible := l
-		for i := 0; i < len(visible); {
-			if visible[i] == '\033' {
-				j := i
-				for j < len(visible) && visible[j] != 'm' {
-					j++
-				}
-				visible = visible[:i] + visible[j+1:]
-			} else {
-				i++
-			}
-		}
-		padding := maxLen - len(visible)
-		if padding < 0 {
-			padding = 0
-		}
-		fmt.Printf("  │ %s%s │\n", l, strings.Repeat(" ", padding))
-	}
-	fmt.Println("  └" + border + "┘")
+	printBox(lines)
 }
 
-func Section(title string) {
-	fmt.Println()
-	RedBold.Printf("── %s ──\n", title)
-	fmt.Println()
+func PrintBox(lines ...string) {
+	printBox(lines)
+}
+
+func printBox(lines []string) {
+	// Calculate max visible width
+	maxW := 0
+	for _, l := range lines {
+		w := visibleLen(l)
+		if w > maxW {
+			maxW = w
+		}
+	}
+
+	border := "─" + strings.Repeat("─", maxW) + "─"
+	top := "┌" + border + "┐"
+	bot := "└" + border + "┘"
+
+	fmt.Println("  " + RedBold.Sprint(top))
+	for _, l := range lines {
+		padding := maxW - visibleLen(l)
+		fmt.Printf("  %s %s%s %s\n",
+			RedBold.Sprint("│"),
+			l,
+			strings.Repeat(" ", padding),
+			RedBold.Sprint("│"),
+		)
+	}
+	fmt.Println("  " + RedBold.Sprint(bot))
+}
+
+// visibleLen returns string length ignoring ANSI escape codes.
+func visibleLen(s string) int {
+	count := 0
+	inEscape := false
+	for _, r := range s {
+		if r == '\033' {
+			inEscape = true
+			continue
+		}
+		if inEscape {
+			if r == 'm' {
+				inEscape = false
+			}
+			continue
+		}
+		count++
+	}
+	return count
 }

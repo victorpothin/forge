@@ -85,7 +85,7 @@ func runUpdate(yes bool) {
 			Default: true,
 		}, &ok)
 		if !ok {
-			dim.Println("  Update cancelled.")
+			ui.Dim.Println("  Update cancelled.")
 			return
 		}
 	}
@@ -120,7 +120,7 @@ func runUpdate(yes bool) {
 	}
 
 	fmt.Println()
-	dim.Println("The CLI has been updated. Restart your terminal if forge was already loaded.")
+	ui.Dim.Println("The CLI has been updated. Restart your terminal if forge was already loaded.")
 	fmt.Println()
 }
 

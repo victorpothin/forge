@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	cyan  = color.New(color.FgCyan, color.Bold)
-	white = color.New(color.FgWhite)
+	skillCyan  = color.New(color.FgCyan, color.Bold)
+	skillWhite = color.New(color.FgWhite)
 )
 
 func init() {
@@ -116,7 +116,7 @@ func runSkillAdd(from, layer, dir string, force bool) {
 		ok := false
 		survey.AskOne(&survey.Confirm{Message: "Proceed?", Default: true}, &ok)
 		if !ok {
-			dim.Println("  Aborted.")
+			ui.Dim.Println("  Aborted.")
 			return
 		}
 	}
@@ -134,23 +134,23 @@ func runSkillAdd(from, layer, dir string, force bool) {
 
 	spinner.StopWith("✓ Skill %s imported to %s",
 		color.New(color.FgGreen, color.Bold).Sprint(skill.Name),
-		dim.Sprintf("%s/%s/", layer, skill.Name))
+		ui.Dim.Sprintf("%s/%s/", layer, skill.Name))
 
 	// Show what's inside
 	entries, _ := os.ReadDir(skill.Path)
 	if len(entries) > 0 {
-		dim.Println("\n  Contents:")
+		ui.Dim.Println("\n  Contents:")
 		for _, e := range entries {
 			if e.IsDir() {
-				dim.Printf("    📁 %s/\n", e.Name())
+				ui.Dim.Printf("    📁 %s/\n", e.Name())
 			} else {
-				dim.Printf("    📄 %s\n", e.Name())
+				ui.Dim.Printf("    📄 %s\n", e.Name())
 			}
 		}
 	}
 
 	fmt.Println()
-	dim.Println("The skill is now available for use in the FORGE planning and execution layers.")
+	ui.Dim.Println("The skill is now available for use in the FORGE planning and execution layers.")
 	fmt.Println()
 }
 
@@ -164,7 +164,7 @@ func runSkillList(dir string) {
 	skillBase := detectSkillBase(target)
 
 	fmt.Println()
-	cyan.Printf("  FORGE Skills — %s\n\n", skillBase)
+	skillCyan.Printf("  FORGE Skills — %s\n\n", skillBase)
 
 	skills, err := skillpkg.List(skillBase)
 	if err != nil {
@@ -179,22 +179,22 @@ func runSkillList(dir string) {
 		totalCount += count
 
 		if count == 0 {
-			dim.Printf("  %-14s  (empty)\n", layer+":")
+			ui.Dim.Printf("  %-14s  (empty)\n", layer+":")
 			continue
 		}
 
-		green.Printf("  %-14s  ", layer+":")
+		ui.GreenB.Printf("  %-14s  ", layer+":")
 		for i, s := range layerSkills {
 			if i > 0 {
-				dim.Print(", ")
+				ui.Dim.Print(", ")
 			}
-			white.Print(s.Name)
+			skillWhite.Print(s.Name)
 		}
 		fmt.Println()
 	}
 
 	fmt.Println()
-	dim.Printf("  Total: %d skill(s)\n", totalCount)
+	ui.Dim.Printf("  Total: %d skill(s)\n", totalCount)
 	fmt.Println()
 }
 
