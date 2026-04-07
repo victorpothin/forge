@@ -17,14 +17,15 @@ func init() {
 
 	editCmd := &cobra.Command{
 		Use:   "edit",
-		Short: "Add or remove FORGE layers from a project",
+		Short: "Toggle FORGE layers on/off",
 		Long: `Interactively manage which FORGE layers are active in a project.
 
+Use Space to toggle each layer on/off. Press Enter when done.
+
 Examples:
-  forge edit                 # Interactive wizard
+  forge edit                 # Interactive toggle
   forge edit --add testing,docs
-  forge edit --remove context,documentation
-  forge edit --add planning --remove locked-path`,
+  forge edit --remove context,documentation`,
 		Run: func(cmd *cobra.Command, args []string) {
 			runEdit(editDir, addLayers, removeLayers, editYes)
 		},
@@ -84,7 +85,7 @@ func runEdit(dir, addStr, removeStr string, yes bool) {
 		return
 	}
 
-	// Interactive mode
+	// Interactive mode — toggle style
 	fmt.Println()
 	ui.Bold.Printf("  FORGE Edit\n")
 	ui.Dim.Printf("  %s\n\n", target)
@@ -93,19 +94,17 @@ func runEdit(dir, addStr, removeStr string, yes bool) {
 	printLayerStatus(cfg.Layers)
 	fmt.Println()
 
-	// Build options with current state
+	// Build options
 	opts := make([]string, len(allLayers))
 	def := make([]string, 0, len(allLayers))
 	for i, l := range allLayers {
-		enabled := cfg.Layers[l]
-		if enabled {
-			def = append(def, fmt.Sprintf("%s — %s", l, layerDescriptions[l]))
-		}
 		opts[i] = fmt.Sprintf("%s — %s", l, layerDescriptions[l])
+		if cfg.Layers[l] {
+			def = append(def, opts[i])
+		}
 	}
 
-	ui.Dim.Println("  Toggle layers on/off. Currently enabled are pre-selected.")
-	ui.Dim.Println("  Press Ctrl+C at any prompt to quit.")
+	ui.Dim.Println("  Space: toggle on/off  |  Enter: confirm  |  Ctrl+C: quit")
 	fmt.Println()
 
 	var selected []string
@@ -135,10 +134,20 @@ func runEdit(dir, addStr, removeStr string, yes bool) {
 		}
 	}
 
+	// Show diff
+	changes := diffLayers(cfg.Layers, newLayers)
+	if len(changes) == 0 {
+		ui.PrintSuccess("No changes needed")
+		fmt.Println()
+		return
+	}
+
 	if !yes {
 		fmt.Println()
-		ui.PrintHeader("New configuration")
-		printLayerStatus(newLayers)
+		ui.PrintHeader("Changes")
+		for _, c := range changes {
+			fmt.Println(c)
+		}
 		fmt.Println()
 
 		ok := false
@@ -156,8 +165,27 @@ func runEdit(dir, addStr, removeStr string, yes bool) {
 	}
 
 	fmt.Println()
+	ui.PrintHeader("New configuration")
+	printLayerStatus(newLayers)
+	fmt.Println()
 	ui.PrintSuccess("Layers updated successfully")
 	fmt.Println()
+}
+
+func diffLayers(old, new map[string]bool) []string {
+	var changes []string
+	for _, l := range allLayers {
+		wasOn := old[l]
+		isOn := new[l]
+		if wasOn != isOn {
+			if isOn {
+				changes = append(changes, fmt.Sprintf("  + %s (enabled)", l))
+			} else {
+				changes = append(changes, fmt.Sprintf("  - %s (disabled)", l))
+			}
+		}
+	}
+	return changes
 }
 
 func printLayerStatus(layers map[string]bool) {

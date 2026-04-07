@@ -145,7 +145,7 @@ forge update -y                          # Auto-update
 | `forge init` | Initialize FORGE in a project (interactive or flags) |
 | `forge skill add` | Import a skill from local dir, URL, or git repo |
 | `forge skill list` | List all skills organized by layer |
-| `forge edit` | Add or remove FORGE layers from a project |
+| `forge edit` | Toggle FORGE layers on/off (Space to toggle, Enter to confirm) |
 | `forge doctor` | Check if FORGE is properly set up |
 | `forge update` | Check for updates and self-update the CLI |
 | `forge --version` | Show CLI version |
