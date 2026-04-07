@@ -1,0 +1,17 @@
+# Go build
+forge
+cli/forge
+
+# Go test
+*.test
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Qwen
+.qwen/

@@ -57,42 +57,64 @@ forge/
     └── rust-backend/         # Mixed model workflow example (Qwen + Claude)
 ```
 
-## Getting Started
+## CLI
+
+Forge comes with a CLI tool written in Go + Cobra for easy project initialization.
+
+### Install
+
+```bash
+# From source
+cd cli/
+go build -o forge .
+sudo mv forge /usr/local/bin/
+```
+
+### Usage
+
+```bash
+# Interactive wizard
+forge init
+
+# Non-interactive — just specify the AI
+forge init --ai qwen -y
+
+# Override defaults
+forge init --ai claude --model claude-sonnet-4-20250514 --gate-mode strict -y
+
+# Force overwrite existing files
+forge init --ai gpt --force -y
+
+# Check project health
+forge doctor
+forge doctor --dir /path/to/project
+```
+
+### Commands
+
+| Command | Description |
+|---|---|
+| `forge init` | Initialize FORGE in a project (interactive or flags) |
+| `forge doctor` | Check if FORGE is properly set up |
+| `forge --version` | Show CLI version |
+
+### Init flags
+
+| Flag | Short | Description |
+|---|---|---|
+| `--ai <model>` | `-a` | AI model: `qwen`, `claude`, `gpt`, `gemini`, `custom` |
+| `--model <name>` | `-m` | Model name (e.g. `qwen-code`, defaults to AI-specific value) |
+| `--gate-mode <mode>` | `-g` | Gate mode: `strict` (default) or `auto` |
+| `--dir <path>` | `-d` | Target directory (default: `.`) |
+| `--yes` | `-y` | Skip confirmation |
+| `--force` | | Overwrite existing FORGE files |
+
+### Manual setup (no CLI)
 
 1. Copy `FORGE.md` and `.forgerc.json` into your project
 2. Edit `.forgerc.json` to set your AI model (`qwen`, `claude`, `gemini`, `gpt`, `custom`)
-3. Start a session and reference `FORGE.md`
-4. Let the AI fill the **Context** layer — then validate it before proceeding
-5. Define your **Problem** list in priority order
-6. Fill **Locked Path** with decisions already made and approaches you don't want explored
-7. Let the AI generate the **Planning** layer
-8. Execute layer by layer, gate by gate
-
-### Quick start by model
-
-**Qwen Code:**
-```bash
-# Copy FORGE files
-cp FORGE.md /your/project/
-cp .forgerc.json /your/project/
-# In Qwen Code session:
-# "Start a FORGE session. Read FORGE.md and .forgerc.json. Begin Layer 1."
-```
-
-**Claude Code:**
-```bash
-# Copy FORGE files
-cp FORGE.md /your/project/.claude/
-cp .forgerc.json /your/project/
-# In Claude session:
-# "@FORGE.md — begin Layer 1 (Context)."
-```
-
-**Any other model:**
-```
-# Paste FORGE.md content at session start
-# "We will use the FORGE method. Here are the rules: [paste]"
-```
+3. Copy `skills/` to your AI's skill directory (see AI-ADAPTER.md)
+4. Start a session and reference `FORGE.md`
 
 ## Method Comparison
 
