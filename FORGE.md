@@ -7,11 +7,9 @@
 
 ## AI Instructions
 
-**Read `.forgerc.json` first.** It tells you:
-- Which AI model is being used
-- Gate mode (`strict` = must confirm, `auto` = proceed)
-- Which layers are active
-- Per-layer AI assignments (if mixing models)
+**Read these files first:**
+- `.forgerc.json` — AI model, gate mode, active layers
+- `.forge-memory` — persistent project rules and context (load only what's relevant)
 
 **Rules that apply to ALL AI models:**
 1. Execute layers **in order** (1→7). Never skip.
@@ -19,6 +17,12 @@
 3. Do NOT infer or fill sections without explicit user input when required.
 4. Do NOT suggest alternatives when a `[DECISION]` or `[THOUGHT]` is locked.
 5. Documentation (Layer 7) must reflect **what was actually built**, not what was planned.
+
+**About `.forge-memory`:**
+- This file stores persistent project rules (e.g., "PostgreSQL only", "no microservices")
+- **Read it before starting each session** — apply memories as implicit Locked Paths
+- Only load memories relevant to the current context — don't dump everything
+- Never delete or modify this file — use `forge memory` commands
 
 ---
 

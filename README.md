@@ -146,6 +146,11 @@ forge update -y                          # Auto-update
 | `forge skill add` | Import a skill from local dir, URL, or git repo |
 | `forge skill list` | List all skills organized by layer |
 | `forge edit` | Toggle FORGE layers on/off (Space to toggle, Enter to confirm) |
+| `forge memory add` | Save persistent project rules and context |
+| `forge memory list` | View all stored memories |
+| `forge memory search` | Search memories by text or tag |
+| `forge memory delete` | Remove memories by ID |
+| `forge memory clear` | Delete all memories |
 | `forge doctor` | Check if FORGE is properly set up |
 | `forge update` | Check for updates and self-update the CLI |
 | `forge --version` | Show CLI version |
@@ -179,6 +184,13 @@ forge update -y                          # Auto-update
 | `--remove <layers>` | | Comma-separated layers to disable |
 | `--dir <path>` | `-d` | Target project directory (default: `.`) |
 | `--yes` | `-y` | Skip confirmation |
+
+### Memory flags
+
+| Flag | Short | Description |
+|---|---|---|
+| `--tag <tags>` | `-t` | Comma-separated tags for searching (add command) |
+| `--dir <path>` | `-d` | Target project directory (default: `.`) |
 
 ### Manual setup (no CLI)
 
