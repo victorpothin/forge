@@ -24,6 +24,28 @@
 - Only load memories relevant to the current context — don't dump everything
 - Never delete or modify this file — use `forge memory` commands
 
+**About the `forge` CLI:**
+You can run `forge` commands directly from the project root. Use them to
+manage layers, skills, memories, and verify project health.
+
+### Available commands
+
+| Command | When to use |
+|---|---|
+| `forge memory list` | Check what rules are stored before giving recommendations |
+| `forge memory add -t <tag> "text"` | Save a rule the user confirmed (e.g. after Layer 3 Locked Path) |
+| `forge memory delete <id>` | Remove a rule the user asked to delete |
+| `forge skill add --from <src> --layer <l>` | Import an external skill the user provided |
+| `forge skill list` | See what skills are available for this project |
+| `forge edit --add <layers>` / `--remove <layers>` | Enable or disable layers at the user's request |
+| `forge doctor` | Quick health check if the user reports issues |
+
+### Rules for running commands
+- Always run from the project root (`.` or `--dir <path>`)
+- Use `-y` flag to skip confirmation **only** when the user explicitly agreed
+- Never run destructive commands (`memory clear`, `edit --remove`) without confirming with the user first
+- After running a command, report the output back to the user
+
 ---
 
 ## LAYER 1 — CONTEXT

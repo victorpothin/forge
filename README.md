@@ -44,48 +44,6 @@ FORGE fixes this by enforcing a strict flow with gates between layers.
 
 The AI must stop and confirm with you before advancing. This is not optional.
 
-## Repository Structure
-
-```
-forge/
-├── README.md
-├── FORGE.md                  # Master template
-├── .forgerc.json             # Configuration
-├── AI-ADAPTER.md             # AI model behavior guide
-├── LICENSE                   # MIT License
-├── go.mod                    # Go module definition
-├── main.go                   # CLI entry point
-│
-├── cmd/                      # CLI commands (cobra)
-│   ├── root.go
-│   ├── init.go
-│   ├── edit.go
-│   ├── skill.go
-│   ├── doctor.go
-│   └── update.go
-│
-├── internal/
-│   ├── templates/            # Embedded FORGE templates + skills
-│   │   ├── FORGE.md
-│   │   ├── skills/
-│   │   └── templates.go
-│   └── ui/                   # CLI UI helpers
-│       └── ui.go
-│
-├── skills/                   # Source skills (copied to cli/embed on build)
-│   ├── context/
-│   ├── problem/
-│   ├── locked-path/
-│   ├── planning/
-│   ├── execution/
-│   ├── testing/
-│   └── docs/
-│
-└── examples/
-    ├── dotnet-api/
-    └── rust-backend/
-```
-
 ## CLI
 
 ### Install
