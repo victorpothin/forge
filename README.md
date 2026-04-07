@@ -1,10 +1,20 @@
-# FORGE
+<div align="center">
 
-**Focused, Ordered, Restricted, Guided Execution**
+# 🔥 FORGE
 
-FORGE is a structured method for working with AI on software projects. It ensures the AI understands your intent, respects your restrictions, and executes only what was asked — nothing more.
+**Focused · Ordered · Restricted · Guided Execution**
 
-**AI-agnostic.** Works with Qwen, Claude, Gemini, GPT, or any coding assistant. Mix models across layers if you want.
+A structured method for working with AI on software projects.
+
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Go](https://img.shields.io/badge/go-1.22+-00ADD8.svg)](https://go.dev/)
+[![Release](https://img.shields.io/github/v/release/victorpothin/forge)](https://github.com/victorpothin/forge/releases)
+
+**AI-agnostic.** Works with Qwen, Claude, Gemini, GPT, or any coding assistant.
+
+</div>
+
+FORGE ensures the AI understands your intent, respects your restrictions, and executes only what was asked — nothing more.
 
 ## Why FORGE?
 
