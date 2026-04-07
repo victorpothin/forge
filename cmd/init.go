@@ -4,10 +4,19 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/fatih/color"
 	"github.com/victorpothin/forge/internal/templates"
+	"github.com/victorpothin/forge/internal/ui"
 	"github.com/spf13/cobra"
+)
+
+var (
+	green = color.New(color.FgGreen)
+	dim   = color.New(color.Faint)
+	red   = color.New(color.FgRed, color.Bold)
 )
 
 func init() {
@@ -45,15 +54,17 @@ Examples:
 }
 
 func runInit(dir, ai, model, gateMode string, yes, force bool) {
-	banner()
+	ui.Banner(version)
 
 	target, err := filepath.Abs(dir)
 	if err != nil {
-		fail("Invalid directory: %v", err)
+		ui.PrintError("Invalid directory: %v", err)
+		return
 	}
 
 	if _, err := os.Stat(target); os.IsNotExist(err) {
-		fail("Directory does not exist: %s", target)
+		ui.PrintError("Directory does not exist: %s", target)
+		return
 	}
 
 	// --- Gather config (smart defaults when --ai is set) ---
@@ -63,32 +74,32 @@ func runInit(dir, ai, model, gateMode string, yes, force bool) {
 	model = gatherModel(model, ai, hasAI)
 
 	// --- Show plan ---
-	fmt.Println("📋 Configuration:")
-	fmt.Printf("  AI model:   %s (%s)\n", ai, model)
-	fmt.Printf("  Gate mode:  %s\n", gateMode)
-	fmt.Printf("  Target:     %s\n", target)
+	ui.PrintHeader("Configuration")
+	ui.PrintConfig("AI model", fmt.Sprintf("%s (%s)", ai, model))
+	ui.PrintConfig("Gate mode", gateMode)
+	ui.PrintConfig("Target", target)
 	fmt.Println()
 
 	skillPath := templates.SkillPathFor(ai)
-	fmt.Println("📁 Files to create/overwrite:")
+	ui.PrintHeader("Files to create/overwrite")
 
+	filesToCreate := []string{}
 	if !templates.HasForgeMD(target) || force {
 		label := "FORGE.md"
 		if templates.HasForgeMD(target) {
 			label = "FORGE.md (overwrite)"
 		}
-		fmt.Printf("  ✅ %s\n", label)
+		filesToCreate = append(filesToCreate, label)
 	}
-
-	fmt.Println("  ✅ .forgerc.json")
-
+	filesToCreate = append(filesToCreate, ".forgerc.json")
 	if !templates.HasSkills(target, ai) || force {
 		label := skillPath
 		if templates.HasSkills(target, ai) {
 			label = skillPath + " (overwrite)"
 		}
-		fmt.Printf("  ✅ %s\n", label)
+		filesToCreate = append(filesToCreate, label)
 	}
+	ui.PrintFileListPending(filesToCreate)
 	fmt.Println()
 
 	if !yes && !force {
@@ -99,62 +110,81 @@ func runInit(dir, ai, model, gateMode string, yes, force bool) {
 		}
 		survey.AskOne(prompt, &ok)
 		if !ok {
-			fmt.Println("\n⚠️  Aborted.")
+			fmt.Println()
+			dim.Println("  Aborted.")
+			fmt.Println()
 			return
 		}
 	}
 
-	// --- Execute ---
+	// --- Execute with animations ---
 	fmt.Println()
 
 	// 1. Copy FORGE.md
+	spinner := ui.NewSpinner("Copying FORGE.md...")
+	spinner.Start()
+	time.Sleep(300 * time.Millisecond)
 	copied, err := templates.CopyForgeMD(target, force)
 	if err != nil {
-		fmt.Printf("  ⚠️  %v\n", err)
+		spinner.StopWith("%s FORGE.md: %v", red.Sprintf("✗"), err)
 	} else if copied {
-		fmt.Println("  ✓ FORGE.md")
+		spinner.StopWith("%s FORGE.md", green.Sprintf("✓"))
+	} else {
+		spinner.StopWith("%s FORGE.md (exists)", dim.Sprint("–"))
 	}
 
 	// 2. Generate .forgerc.json
+	spinner2 := ui.NewSpinner("Generating .forgerc.json...")
+	spinner2.Start()
+	time.Sleep(200 * time.Millisecond)
 	configStr, err := templates.GenerateForgeConfig(ai, model, gateMode)
 	if err != nil {
-		fail("Failed to generate config: %v", err)
+		spinner2.StopWith("%s .forgerc.json: %v", red.Sprintf("✗"), err)
+	} else {
+		if err := os.WriteFile(filepath.Join(target, ".forgerc.json"), []byte(configStr), 0644); err != nil {
+			spinner2.StopWith("%s .forgerc.json: %v", red.Sprintf("✗"), err)
+		} else {
+			spinner2.StopWith("%s .forgerc.json", green.Sprintf("✓"))
+		}
 	}
-	if err := os.WriteFile(filepath.Join(target, ".forgerc.json"), []byte(configStr), 0644); err != nil {
-		fail("Failed to write .forgerc.json: %v", err)
-	}
-	fmt.Println("  ✓ .forgerc.json")
 
-	// 3. Copy skills
+	// 3. Copy skills with progress
+	spinner3 := ui.NewSpinner("Copying skill files...")
+	spinner3.Start()
+	time.Sleep(200 * time.Millisecond)
 	skills, err := templates.CopySkills(target, ai, force)
 	if err != nil {
-		fmt.Printf("  ⚠️  %v\n", err)
+		spinner3.StopWith("%s skills: %v", red.Sprintf("✗"), err)
 	} else {
+		totalLayers := len(templates.SupportedAI())
+		_ = totalLayers
+		spinner3.StopWith("%s %d skill layers copied", green.Sprintf("✓"), len(skills))
 		for _, s := range skills {
-			fmt.Printf("  ✓ %s\n", s)
+			dim.Printf("    %s\n", s)
 		}
 	}
 
 	// --- Summary ---
 	fmt.Println()
-	fmt.Println("┌──────────────────────────────────────┐")
-	fmt.Println("│   ✅ FORGE initialized               │")
-	fmt.Printf("│   in %-36s│\n", truncatePath(target, 36))
-	fmt.Println("└──────────────────────────────────────┘")
+	ui.PrintBox(
+		red.Sprint("  FORGE initialized"),
+		fmt.Sprintf("  in %s", target),
+	)
 	fmt.Println()
-	fmt.Println("Next steps:")
-	fmt.Println("  1. Open FORGE.md in your project")
+	dim.Println("Next steps:")
+	green.Println("  1. Open FORGE.md in your project")
 	fmt.Printf("  2. Start a session with your AI (%s)\n", ai)
-	fmt.Println("  3. Reference FORGE.md and begin Layer 1")
+	dim.Println("  3. Reference FORGE.md and begin Layer 1")
 	fmt.Println()
-	fmt.Println("  Run 'forge doctor' to verify setup")
+	dim.Println("  Run 'forge doctor' to verify setup")
 	fmt.Println()
 }
 
 func gatherAI(ai string) string {
 	if ai != "" {
 		if !templates.IsValidAI(ai) {
-			fail("Invalid AI model: %s\nSupported: %s", ai, joinAIList())
+			ui.PrintError("Invalid AI model: %s\nSupported: %s", ai, joinAIList())
+			os.Exit(1)
 		}
 		return ai
 	}
@@ -165,13 +195,11 @@ func gatherAI(ai string) string {
 		Options: buildAIOptions(),
 	}
 	survey.AskOne(prompt, &answer)
-	// Extract the AI name (before " — ")
 	for _, valid := range templates.SupportedAI() {
 		if answer == valid {
 			return valid
 		}
 	}
-	// Fallback: split on " — "
 	for _, valid := range templates.SupportedAI() {
 		if len(answer) > len(valid) && answer[:len(valid)] == valid {
 			return valid
@@ -183,7 +211,8 @@ func gatherAI(ai string) string {
 func gatherGateMode(gateMode string, hasAIFlag bool) string {
 	if gateMode != "" {
 		if !templates.IsValidGateMode(gateMode) {
-			fail("Invalid gate mode: %s\nSupported: strict, auto", gateMode)
+			ui.PrintError("Invalid gate mode: %s\nSupported: strict, auto", gateMode)
+			os.Exit(1)
 		}
 		return gateMode
 	}
@@ -199,7 +228,6 @@ func gatherGateMode(gateMode string, hasAIFlag bool) string {
 			"auto",
 		},
 		Default: "strict",
-		Help:    "strict = AI stops at each gate; auto = AI proceeds automatically",
 	}
 	survey.AskOne(prompt, &answer)
 	return answer
@@ -251,17 +279,4 @@ func joinAIList() string {
 		result += ai
 	}
 	return result
-}
-
-func truncatePath(p string, maxLen int) string {
-	if len(p) <= maxLen {
-		return p
-	}
-	// Show last maxLen-3 chars with ...
-	return "..." + p[len(p)-(maxLen-3):]
-}
-
-func fail(format string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, "\n❌ Error: "+format+"\n", args...)
-	os.Exit(1)
 }

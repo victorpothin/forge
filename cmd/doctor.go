@@ -6,7 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/victorpothin/forge/internal/templates"
+	"github.com/victorpothin/forge/internal/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -44,18 +46,29 @@ type checkResult struct {
 	details string
 }
 
+var (
+	redBold   = color.New(color.FgRed, color.Bold)
+	greenBold = color.New(color.FgGreen, color.Bold)
+)
+
 func runDoctor(dir string) {
 	target, err := filepath.Abs(dir)
 	if err != nil {
-		fail("Invalid directory: %v", err)
+		ui.PrintError("Invalid directory: %v", err)
+		return
 	}
 
 	if _, err := os.Stat(target); os.IsNotExist(err) {
-		fail("Directory does not exist: %s", target)
+		ui.PrintError("Directory does not exist: %s", target)
+		return
 	}
 
-	fmt.Println("🔍 FORGE Doctor — Checking project setup")
-	fmt.Printf("Target: %s\n\n", target)
+	// Animated check
+	spinner := ui.NewSpinner("Scanning project...")
+	spinner.Start()
+
+	fmt.Printf("\n  FORGE Doctor — Checking project setup\n")
+	fmt.Printf("  Target: %s\n\n", target)
 
 	var checks []checkResult
 
@@ -79,7 +92,7 @@ func runDoctor(dir string) {
 		checks = append(checks, checkResult{
 			name:    ".forgerc.json",
 			ok:      false,
-			status:  "❌ INVALID",
+			status:  "INVALID",
 			details: err.Error(),
 		})
 	} else {
@@ -95,14 +108,14 @@ func runDoctor(dir string) {
 			checks = append(checks, checkResult{
 				name:    ".forgerc.json",
 				ok:      false,
-				status:  "❌ INVALID",
+				status:  "INVALID",
 				details: strings.Join(issues, ", "),
 			})
 		} else {
 			checks = append(checks, checkResult{
 				name:    ".forgerc.json",
 				ok:      true,
-				status:  "✅ OK",
+				status:  "OK",
 				details: fmt.Sprintf("ai=%s, gate_mode=%s", forgeCfg.AI, forgeCfg.GateMode),
 			})
 		}
@@ -119,14 +132,14 @@ func runDoctor(dir string) {
 			checks = append(checks, checkResult{
 				name:    "skills",
 				ok:      true,
-				status:  "✅ OK",
+				status:  "OK",
 				details: fmt.Sprintf("%d layers in %s", layers, skillDir),
 			})
 		} else {
 			checks = append(checks, checkResult{
 				name:    "skills",
 				ok:      false,
-				status:  "❌ MISSING",
+				status:  "MISSING",
 				details: fmt.Sprintf("expected in %s", skillDir),
 			})
 		}
@@ -134,10 +147,12 @@ func runDoctor(dir string) {
 		checks = append(checks, checkResult{
 			name:    "skills",
 			ok:      false,
-			status:  "❌ UNKNOWN",
+			status:  "UNKNOWN",
 			details: "cannot check skills without .forgerc.json",
 		})
 	}
+
+	spinner.Stop()
 
 	// Print table
 	printTable(checks)
@@ -153,9 +168,9 @@ func runDoctor(dir string) {
 	}
 
 	if allOK {
-		fmt.Println("✅ All checks passed.")
+		greenBold.Println("  ✓ All checks passed.")
 	} else {
-		fmt.Println("⚠️  Some checks failed. Run 'forge init' to set up missing components.")
+		ui.PrintWarning("Some checks failed. Run 'forge init' to set up missing components.")
 	}
 	fmt.Println()
 }
@@ -165,28 +180,34 @@ func checkFile(filePath, name, description string) checkResult {
 		return checkResult{
 			name:    name,
 			ok:      true,
-			status:  "✅ OK",
+			status:  "OK",
 			details: description,
 		}
 	}
 	return checkResult{
 		name:    name,
 		ok:      false,
-		status:  "❌ MISSING",
+		status:  "MISSING",
 		details: description,
 	}
 }
 
 func printTable(checks []checkResult) {
 	nameW := 16
-	statusW := 14
 
-	fmt.Println(strings.Repeat("─", 70))
-	fmt.Printf("%-*s | %-*s | %s\n", nameW, "Check", statusW, "Status", "Details")
-	fmt.Println(strings.Repeat("─", 70))
+	border := strings.Repeat("─", 70)
+	fmt.Println("  " + border)
+	fmt.Printf("  %-*s │ %-14s │ %s\n", nameW, "Check", "Status", "Details")
+	fmt.Println("  " + border)
 
 	for _, c := range checks {
-		fmt.Printf("%-*s | %-*s | %s\n", nameW, c.name, statusW, c.status, c.details)
+		statusStr := c.status
+		if c.ok {
+			statusStr = greenBold.Sprintf("✓ %s", c.status)
+		} else {
+			statusStr = redBold.Sprintf("✗ %s", c.status)
+		}
+		fmt.Printf("  %-*s │ %-20s │ %s\n", nameW, c.name, statusStr, c.details)
 	}
-	fmt.Println(strings.Repeat("─", 70))
+	fmt.Println("  " + border)
 }

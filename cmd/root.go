@@ -30,13 +30,8 @@ func init() {
 	rootCmd.SetVersionTemplate(`forge-cli {{printf "v%s\n" .Version}}`)
 }
 
-func banner() {
-	fmt.Println()
-	fmt.Println("┌──────────────────────────────────────┐")
-	fmt.Println("│       FORGE CLI                      │")
-	fmt.Println("│  Focused, Ordered, Restricted,       │")
-	fmt.Println("│  Guided Execution                    │")
-	fmt.Printf("│  %-36s│\n", "v"+version)
-	fmt.Println("└──────────────────────────────────────┘")
-	fmt.Println()
+// fail prints erro e sai com exit code 1.
+func fail(format string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, "\n❌ Error: "+format+"\n", args...)
+	os.Exit(1)
 }
