@@ -64,27 +64,26 @@ func GenerateForgeConfigWithLayers(ai, model, gateMode string, layers map[string
 	return string(data) + "\n", nil
 }
 
-// UpdateForgeLayers reads .forgerc.json, updates the layers map, and writes it back.
+// UpdateForgeLayers reads forgerc.json, updates the layers map, and writes it back.
+// Auto-detects which AI directory contains the config.
 func UpdateForgeLayers(target string, layers map[string]bool) error {
-	path := filepath.Join(target, ".forgerc.json")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return fmt.Errorf("read .forgerc.json: %w", err)
+	for _, ai := range SupportedAI() {
+		path := ForgeConfigPath(target, ai)
+		data, err := os.ReadFile(path)
+		if err == nil {
+			var config ForgeConfig
+			if err := json.Unmarshal(data, &config); err != nil {
+				return fmt.Errorf("parse forgerc.json: %w", err)
+			}
+			config.Layers = layers
+			out, err := json.MarshalIndent(config, "", "  ")
+			if err != nil {
+				return fmt.Errorf("marshal config: %w", err)
+			}
+			return os.WriteFile(path, append(out, '\n'), 0644)
+		}
 	}
-
-	var config ForgeConfig
-	if err := json.Unmarshal(data, &config); err != nil {
-		return fmt.Errorf("parse .forgerc.json: %w", err)
-	}
-
-	config.Layers = layers
-
-	out, err := json.MarshalIndent(config, "", "  ")
-	if err != nil {
-		return fmt.Errorf("marshal config: %w", err)
-	}
-
-	return os.WriteFile(path, append(out, '\n'), 0644)
+	return fmt.Errorf("forgerc.json not found in any AI directory")
 }
 
 // SkillTargets maps AI model names to skill destination paths.
@@ -94,6 +93,30 @@ var SkillTargets = map[string]string{
 	"gemini": ".gemini/skills/forge",
 	"gpt":    ".gpt/skills/forge",
 	"custom": "skills/forge",
+}
+
+// AIDir returns the AI-specific base directory (e.g., .qwen/, .claude/).
+func AIDir(ai string) string {
+	target := SkillTargets[ai]
+	if target == "" {
+		target = SkillTargets["custom"]
+	}
+	// Take the first component (e.g., ".qwen" from ".qwen/skills/forge")
+	parts := strings.Split(target, "/")
+	if len(parts) > 0 {
+		return parts[0]
+	}
+	return target
+}
+
+// ForgeConfigPath returns the full path to .forgerc.json inside the AI directory.
+func ForgeConfigPath(target, ai string) string {
+	return filepath.Join(target, AIDir(ai), "forgerc.json")
+}
+
+// ForgeMemoryPath returns the full path to .forge-memory inside the AI directory.
+func ForgeMemoryPath(target, ai string) string {
+	return filepath.Join(target, AIDir(ai), "forge-memory")
 }
 
 // AIDescriptions maps AI model names to human-readable descriptions.
@@ -227,10 +250,15 @@ func HasForgeMD(target string) bool {
 	return err == nil
 }
 
-// HasForgeConfig checks if .forgerc.json exists in the target directory.
+// HasForgeConfig checks if forgerc.json exists in any AI directory.
 func HasForgeConfig(target string) bool {
-	_, err := os.Stat(filepath.Join(target, ".forgerc.json"))
-	return err == nil
+	for _, ai := range SupportedAI() {
+		p := ForgeConfigPath(target, ai)
+		if _, err := os.Stat(p); err == nil {
+			return true
+		}
+	}
+	return false
 }
 
 // HasSkills checks if skills exist in the target directory for the given AI model.
@@ -271,20 +299,21 @@ func SkillLayerCount(target, ai string) int {
 	return count
 }
 
-// LoadForgeConfig reads and parses .forgerc.json from the target directory.
+// LoadForgeConfig reads and parses forgerc.json from the target directory.
+// Auto-detects which AI directory contains the config.
 func LoadForgeConfig(target string) (*ForgeConfig, error) {
-	path := filepath.Join(target, ".forgerc.json")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("read .forgerc.json: %w", err)
+	for _, ai := range SupportedAI() {
+		path := ForgeConfigPath(target, ai)
+		data, err := os.ReadFile(path)
+		if err == nil {
+			var config ForgeConfig
+			if err := json.Unmarshal(data, &config); err != nil {
+				return nil, fmt.Errorf("parse forgerc.json: %w", err)
+			}
+			return &config, nil
+		}
 	}
-
-	var config ForgeConfig
-	if err := json.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("parse .forgerc.json: %w", err)
-	}
-
-	return &config, nil
+	return nil, fmt.Errorf("forgerc.json not found in any AI directory")
 }
 
 // IsForgeFile checks if a filename is one of the FORGE-managed files.

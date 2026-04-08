@@ -64,16 +64,12 @@ func runDoctor(dir string) {
 		"Master template",
 	))
 
-	checks = append(checks, checkFile(
-		filepath.Join(target, ".forgerc.json"),
-		".forgerc.json",
-		"Configuration",
-	))
+	checks = append(checks, checkForgeConfig(target))
 
 	forgeCfg, err := templates.LoadForgeConfig(target)
 	if err != nil {
 		checks = append(checks, checkResult{
-			name: ".forgerc.json", ok: false,
+			name: "forgerc.json", ok: false,
 			status: "INVALID", details: err.Error(),
 		})
 	} else {
@@ -87,12 +83,12 @@ func runDoctor(dir string) {
 
 		if len(issues) > 0 {
 			checks = append(checks, checkResult{
-				name: ".forgerc.json", ok: false,
+				name: "forgerc.json", ok: false,
 				status: "INVALID", details: strings.Join(issues, ", "),
 			})
 		} else {
 			checks = append(checks, checkResult{
-				name: ".forgerc.json", ok: true,
+				name: "forgerc.json", ok: true,
 				status: "OK", details: fmt.Sprintf("ai=%s, gate_mode=%s", forgeCfg.AI, forgeCfg.GateMode),
 			})
 		}
@@ -148,6 +144,16 @@ func checkFile(filePath, name, description string) checkResult {
 		return checkResult{name, true, "OK", description}
 	}
 	return checkResult{name, false, "MISSING", description}
+}
+
+func checkForgeConfig(target string) checkResult {
+	for _, ai := range templates.SupportedAI() {
+		path := templates.ForgeConfigPath(target, ai)
+		if _, err := os.Stat(path); err == nil {
+			return checkResult{"forgerc.json", true, "OK", fmt.Sprintf("in %s/", templates.AIDir(ai))}
+		}
+	}
+	return checkResult{"forgerc.json", false, "MISSING", "not found in any AI directory"}
 }
 
 func printTable(checks []checkResult) {

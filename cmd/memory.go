@@ -4,11 +4,11 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/victorpothin/forge/internal/templates"
 	"github.com/victorpothin/forge/internal/ui"
 	"github.com/spf13/cobra"
 )
@@ -48,7 +48,15 @@ type Memory struct {
 }
 
 func memFile(dir string) string {
-	return filepath.Join(dir, ".forge-memory")
+	// Auto-detect AI directory by finding forgerc.json
+	for _, ai := range templates.SupportedAI() {
+		configPath := templates.ForgeConfigPath(dir, ai)
+		if _, err := os.Stat(configPath); err == nil {
+			return templates.ForgeMemoryPath(dir, ai)
+		}
+	}
+	// Fallback: .qwen (most common)
+	return templates.ForgeMemoryPath(dir, "qwen")
 }
 
 func loadMemories(dir string) ([]Memory, error) {

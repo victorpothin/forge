@@ -115,7 +115,8 @@ func runInit(dir, ai, model, gateMode string, selLayers []string, yes, force boo
 		}
 		filesToCreate = append(filesToCreate, label)
 	}
-	filesToCreate = append(filesToCreate, ".forgerc.json")
+	forgeConfigPath := templates.ForgeConfigPath(target, ai)
+	filesToCreate = append(filesToCreate, ".forgerc.json (inside "+templates.AIDir(ai)+"/)")
 	if !templates.HasSkills(target, ai) || force {
 		label := skillPath
 		if templates.HasSkills(target, ai) {
@@ -168,7 +169,7 @@ func runInit(dir, ai, model, gateMode string, selLayers []string, yes, force boo
 	if err != nil {
 		spinner2.StopWith("✗ .forgerc.json: %v", err)
 	} else {
-		if err := os.WriteFile(filepath.Join(target, ".forgerc.json"), []byte(configStr), 0644); err != nil {
+		if err := os.WriteFile(forgeConfigPath, []byte(configStr), 0644); err != nil {
 			spinner2.StopWith("✗ .forgerc.json: %v", err)
 		} else {
 			spinner2.StopWith("✓ .forgerc.json")
