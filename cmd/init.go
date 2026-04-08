@@ -116,7 +116,7 @@ func runInit(dir, ai, model, gateMode string, selLayers []string, yes, force boo
 		filesToCreate = append(filesToCreate, label)
 	}
 	forgeConfigPath := templates.ForgeConfigPath(target, ai)
-	filesToCreate = append(filesToCreate, ".forgerc.json (inside "+templates.AIDir(ai)+"/)")
+	filesToCreate = append(filesToCreate, "forgerc.json (inside "+templates.AIDir(ai)+"/)")
 	if !templates.HasSkills(target, ai) || force {
 		label := skillPath
 		if templates.HasSkills(target, ai) {

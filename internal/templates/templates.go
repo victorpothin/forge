@@ -244,7 +244,7 @@ func copySkillDir(skillName, destPath string) error {
 	})
 }
 
-// HasForgeMD checks if FORGE.md exists in the target directory.
+// HasForgeMD checks if FORGE.md exists in the project root.
 func HasForgeMD(target string) bool {
 	_, err := os.Stat(filepath.Join(target, "FORGE.md"))
 	return err == nil
